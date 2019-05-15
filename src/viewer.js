@@ -82,6 +82,7 @@ module.exports = class Viewer {
       ? 0.8 * 180 / Math.PI
       : 60;
     this.defaultCamera = new THREE.PerspectiveCamera( fov, el.clientWidth / el.clientHeight, 0.01, 1000 );
+    // this.defaultCamera = new THREE.OrthographicCamera( el.clientWidth / - 2, el.clientWidth / 2, el.clientHeight / 2, el.clientHeight / - 2, 1, 1000 );
     this.activeCamera = this.defaultCamera;
     this.scene.add( this.defaultCamera );
 
@@ -221,28 +222,20 @@ module.exports = class Viewer {
     const center = box.getCenter(new THREE.Vector3());
 
     this.controls.reset();
-
-    object.position.x += (object.position.x - center.x);
-    object.position.y += (object.position.y - center.y);
-    object.position.z += (object.position.z - center.z);
     this.controls.maxDistance = size * 10;
     this.defaultCamera.near = size / 100;
     this.defaultCamera.far = size * 100;
     this.defaultCamera.updateProjectionMatrix();
 
     if (this.options.cameraPosition) {
-
       this.defaultCamera.position.fromArray( this.options.cameraPosition );
       this.defaultCamera.lookAt( new THREE.Vector3() );
-
     } else {
-
-      this.defaultCamera.position.copy(center);
+      const loolAt = new THREE.Vector3();
+      this.defaultCamera.lookAt(loolAt);
+      this.defaultCamera.position.copy(loolAt);
       this.defaultCamera.position.x += size / 2.0;
       this.defaultCamera.position.y += size / 5.0;
-      this.defaultCamera.position.z += size / 2.0;
-      this.defaultCamera.lookAt(center);
-
     }
 
     this.setCamera(DEFAULT_CAMERA);
