@@ -81,8 +81,8 @@ module.exports = class Viewer {
     const fov = options.preset === Preset.ASSET_GENERATOR
       ? 0.8 * 180 / Math.PI
       : 60;
-    this.defaultCamera = new THREE.PerspectiveCamera( fov, el.clientWidth / el.clientHeight, 0.01, 1000 );
-    // this.defaultCamera = new THREE.OrthographicCamera( el.clientWidth / - 2, el.clientWidth / 2, el.clientHeight / 2, el.clientHeight / - 2, 1, 1000 );
+    // this.defaultCamera = new THREE.PerspectiveCamera( fov, el.clientWidth / el.clientHeight, 0.01, 1000 );
+    this.defaultCamera = new THREE.OrthographicCamera( el.clientWidth / - 2, el.clientWidth / 2, el.clientHeight / 2, el.clientHeight / - 2, 1, 1000 );
     this.activeCamera = this.defaultCamera;
     this.scene.add( this.defaultCamera );
 
@@ -150,7 +150,11 @@ module.exports = class Viewer {
 
     const {clientHeight, clientWidth} = this.el.parentElement;
 
-    this.defaultCamera.aspect = clientWidth / clientHeight;
+    this.defaultCamera.aspect = clientWidth / 2;
+    this.defaultCamera.left   = -clientWidth / 2;
+    this.defaultCamera.right  = clientWidth / 2;
+    this.defaultCamera.top    = clientHeight / 2;
+    this.defaultCamera.bottom = -clientHeight / 2;
     this.defaultCamera.updateProjectionMatrix();
     this.background.style({aspect: this.defaultCamera.aspect});
     this.renderer.setSize(clientWidth, clientHeight);
