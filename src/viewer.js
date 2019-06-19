@@ -46,10 +46,11 @@ module.exports = class Viewer {
     this.clips = [];
     this.gui = null;
 
+
     this.state = {
       environment: options.preset === Preset.ASSET_GENERATOR
         ? 'Footprint Court (HDR)'
-        : environments[1].name,
+        : environments[4].name,
       background: false,
       playbackSpeed: 1.0,
       actionStates: {},
@@ -60,14 +61,18 @@ module.exports = class Viewer {
 
       // Lights
       addLights: true,
-      exposure: 1.0,
+      exposure: 2.0,
       textureEncoding: 'sRGB',
-      ambientIntensity: 0.3,
-      ambientColor: 0xFFFFFF,
-      directIntensity: 0.8 * Math.PI, // TODO(#116)
-      directColor: 0xFFFFFF,
+      ambientIntensity: 1.5,
+      ambientColor: 0xd6f6ff,
+      directIntensity: 1.0,//0.8 * Math.PI, // TODO(#116)
+      directColor: 0xffefc1,
       bgColor1: '#ffffff',
-      bgColor2: '#353535'
+      bgColor2: '#ffffff',
+
+      // Capture
+      time: 10.0,
+      fps: 60.0
     };
 
     this.prevTime = 0;
@@ -82,7 +87,7 @@ module.exports = class Viewer {
       ? 0.8 * 180 / Math.PI
       : 60;
     // this.defaultCamera = new THREE.PerspectiveCamera( fov, el.clientWidth / el.clientHeight, 0.01, 1000 );
-    this.defaultCamera = new THREE.OrthographicCamera( el.clientWidth / - 2, el.clientWidth / 2, el.clientHeight / 2, el.clientHeight / - 2, 1, 1000 );
+    this.defaultCamera = new THREE.OrthographicCamera( el.clientWidth / - 2, el.clientWidth / 2, el.clientHeight / 2, el.clientHeight / - 2, -10, 100 );
     this.activeCamera = this.defaultCamera;
     this.scene.add( this.defaultCamera );
 
@@ -92,18 +97,30 @@ module.exports = class Viewer {
     this.renderer.gammaFactor = 2.2;
     this.renderer.setClearColor( 0xcccccc );
     this.renderer.setPixelRatio( window.devicePixelRatio );
-    this.renderer.setSize( el.clientWidth, el.clientHeight );
+    // this.renderer.setSize( el.clientWidth, el.clientHeight );
+    // this.renderer.setSize( 1939, 1307 );
+    this.resize();
 
     this.controls = new THREE.OrbitControls( this.defaultCamera, this.renderer.domElement );
-    this.controls.autoRotate = false;
-    this.controls.autoRotateSpeed = -10;
-    this.controls.screenSpacePanning = true;
+    // this.controls.autoRotate = false;
+    // this.controls.autoRotateSpeed = -10;
+    // this.controls.screenSpacePanning = true;
 
-    this.background = createVignetteBackground({
-      aspect: this.defaultCamera.aspect,
-      grainScale: IS_IOS ? 0 : 0.001, // mattdesl/three-vignette-background#1
-      colors: [this.state.bgColor1, this.state.bgColor2]
-    });
+    this.controls.userPan = false;
+    this.controls.userPanSpeed = 0.0;
+
+    this.controls.maxPolarAngle = 0;
+    this.controls.minPolarAngle = Math.PI/2.7;
+
+    this.controls.autoRotate = false;
+    this.controls.autoRotateSpeed = 1.0;
+    this.controls.enableZoom = true;
+
+    // this.background = createVignetteBackground({
+    //   aspect: this.defaultCamera.aspect,
+    //   grainScale: IS_IOS ? 0 : 0.001, // mattdesl/three-vignette-background#1
+    //   colors: [this.state.bgColor1, this.state.bgColor2]
+    // });
 
     this.el.appendChild(this.renderer.domElement);
 
@@ -138,17 +155,21 @@ module.exports = class Viewer {
 
     this.prevTime = time;
 
+    if(this.capturer){
+      this.capturer.capture( this.renderer.domElement);
+    }
   }
 
   render () {
-
+    // requestAnimationFrame(this.render);
     this.renderer.render( this.scene, this.activeCamera );
-
   }
 
   resize () {
 
     const {clientHeight, clientWidth} = this.el.parentElement;
+    // const clientWidth = 1939;
+    // const clientHeight = 1307;
 
     this.defaultCamera.aspect = clientWidth / 2;
     this.defaultCamera.left   = -clientWidth / 2;
@@ -156,9 +177,8 @@ module.exports = class Viewer {
     this.defaultCamera.top    = clientHeight / 2;
     this.defaultCamera.bottom = -clientHeight / 2;
     this.defaultCamera.updateProjectionMatrix();
-    this.background.style({aspect: this.defaultCamera.aspect});
+    // this.background.style({aspect: this.defaultCamera.aspect});
     this.renderer.setSize(clientWidth, clientHeight);
-
   }
 
   load ( url, rootPath, assetMap ) {
@@ -249,6 +269,15 @@ module.exports = class Viewer {
     this.scene.add(object);
     this.content = object;
 
+
+    //Load background texture
+    {
+      let loader = new THREE.TextureLoader();
+      loader.load('assets/bg.png', (texture)=>{
+        this.scene.background = texture;
+      });
+    }
+
     this.state.addLights = true;
     this.content.traverse((node) => {
       if (node.isLight) {
@@ -268,6 +297,7 @@ module.exports = class Viewer {
     console.info('[glTF Viewer] THREE.Scene exported as `window.content`.');
     this.printGraph(this.content);
 
+    // this.capturer.start();
   }
 
   printGraph (node) {
@@ -346,6 +376,7 @@ module.exports = class Viewer {
     this.renderer.toneMappingExposure = state.exposure;
 
     if (lights.length === 2) {
+      //amb
       lights[0].intensity = state.ambientIntensity;
       lights[0].color.setHex(state.ambientColor);
       lights[1].intensity = state.directIntensity;
@@ -369,7 +400,7 @@ module.exports = class Viewer {
     this.defaultCamera.add( light1 );
 
     const light2  = new THREE.DirectionalLight(state.directColor, state.directIntensity);
-    light2.position.set(0.5, 0, 0.866); // ~60º
+    // light2.position.set(0.5, 0, 0.866); // ~60º
     light2.name = 'main_light';
     this.defaultCamera.add( light2 );
 
@@ -490,6 +521,17 @@ module.exports = class Viewer {
     this.background.style({colors: [this.state.bgColor1, this.state.bgColor2]});
   }
 
+  startCapture(){
+    this.capturer = new CCapture({
+      format: 'png',
+      framerate: this.state.fps,
+      verbose: true,
+      name: "movie",
+      timeLimit: this.state.time 
+    });
+    this.capturer.start();
+  }
+
   addGUI () {
 
     const gui = this.gui = new dat.GUI({autoPlace: false, width: 260, hideable: true});
@@ -555,6 +597,13 @@ module.exports = class Viewer {
     perfLi.appendChild(this.stats.dom);
     perfLi.classList.add('gui-stats');
     perfFolder.__ul.appendChild( perfLi );
+
+    //Capture
+    this.capFolder = gui.addFolder('Capture');
+    // this.capFolder.domElement.style.display = 'none';
+    this.capFolder.add({capture: () => this.startCapture()}, 'capture');
+    this.capFolder.add(this.state, 'time', 1, 100);
+    this.capFolder.add(this.state, 'fps', 1, 60);
 
     const guiWrap = document.createElement('div');
     this.el.appendChild( guiWrap );
