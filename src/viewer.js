@@ -264,6 +264,7 @@ module.exports = class Viewer {
     this.updateLights();
     this.updateGUI();
     this.updateEnvironment();
+    changeMaterialType(this.content);
     this.updateTextureEncoding();
     this.updateDisplay();
 
@@ -678,5 +679,26 @@ function traverseMaterials (object, callback) {
       ? node.material
       : [node.material];
     materials.forEach(callback);
+  });
+}
+
+function changeMaterialType (object) {
+  object.traverse((node) => {
+    if (!node.isMesh) return;
+    // const materials = Array.isArray(node.material)
+    //   ? node.material
+    //   : [node.material];
+    if(!Array.isArray(node.material)){
+      var texture = node.material.map;
+      node.material = new THREE.MeshBasicMaterial({map:texture});
+      // node.material.map = texture;
+    }else{
+      var texture = node.material.map[0];
+      // node.material = new THREE.MeshBasicMaterial();
+      // node.material.map = texture;
+      node.material = new THREE.MeshBasicMaterial({map:texture});
+
+    }
+    //materials.forEach(callback);
   });
 }
